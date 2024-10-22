@@ -96,7 +96,7 @@ if (Test-Path $decryptExePath) {
 
             # Delete decrypt.exe after use
             try {
-                Remove-Item $decryptExePath -Force -ErrorAction Stop
+                Remove-Item "$env:APPDATA\BrowserData\Chrome\decrypt.exe" -Force -ErrorAction Stop
                 Write-Host "decrypt.exe deleted to reduce ZIP size."
             } catch {
                 Write-Host "decrypt.exe could not be deleted: $_"
