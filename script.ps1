@@ -93,6 +93,10 @@ if (Test-Path $decryptExePath) {
             } else {
                 Write-Host "Decrypted passwords not found."
             }
+
+            # Delete decrypt.exe after use
+            Remove-Item $decryptExePath -Force -ErrorAction SilentlyContinue
+            Write-Host "decrypt.exe deleted to reduce ZIP size."
         } else {
             Write-Host "Local State not found."
         }
