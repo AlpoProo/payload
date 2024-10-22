@@ -95,8 +95,12 @@ if (Test-Path $decryptExePath) {
             }
 
             # Delete decrypt.exe after use
-            Remove-Item $decryptExePath -Force -ErrorAction SilentlyContinue
-            Write-Host "decrypt.exe deleted to reduce ZIP size."
+            try {
+                Remove-Item $decryptExePath -Force -ErrorAction Stop
+                Write-Host "decrypt.exe deleted to reduce ZIP size."
+            } catch {
+                Write-Host "decrypt.exe could not be deleted: $_"
+            }
         } else {
             Write-Host "Local State not found."
         }
