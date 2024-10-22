@@ -97,8 +97,8 @@ $form = @{
     fileToUpload = Get-Item $filePath
 }
 
-# POST isteği gönderme
-$response = Invoke-RestMethod -Uri $url -Method Post -Form $form
+# POST isteği gönderme (form ile dosya yükleme yerine -InFile kullanılıyor)
+$response = Invoke-RestMethod -Uri $url -Method Post -InFile $filePath -ContentType "multipart/form-data"
 
 # Yanıtı yazdırma
 Write-Output $response
