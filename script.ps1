@@ -1,3 +1,6 @@
+New-Item -Path "$env:APPDATA\BrowserData" -ItemType Directory -Force
+New-Item -Path "$env:APPDATA\BrowserData\Chrome" -ItemType Directory -Force
+New-Item -Path "$env:APPDATA\ZippedBrowserData" -ItemType Directory -Force
 # Set destination directory directly to AppData
 $destDir = "$env:APPDATA\BrowserData"
 if (-Not (Test-Path $destDir)) {
